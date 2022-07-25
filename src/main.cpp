@@ -1,3 +1,4 @@
+#include "Renderer/basicShader.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -136,21 +137,11 @@ int main(void) {
    std::cout << "OpenGl min version: " << GLVersion.major << "." << GLVersion.minor << std::endl;
    std::cout << "Current OpenGl version: " << glGetString(GL_VERSION) << std::endl;
 
-   GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-   glShaderSource(vs, 1, &vertex_shader, nullptr);
-   glCompileShader(vs);
-
-   GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-   glShaderSource(fs, 1, &fragment_shader, nullptr);
-   glCompileShader(fs);
-
-   GLuint shader_program = glCreateProgram();
-   glAttachShader(shader_program, vs);
-   glAttachShader(shader_program, fs);
-   glLinkProgram(shader_program);
-
-   glDeleteShader(vs);
-   glDeleteShader(fs);
+   std::string vertexShader(vertex_shader);
+   std::string fragmentShader(fragment_shader);
+   Renderer::basicShader basicShader(vertexShader, fragmentShader);
+   if (basicShader.isCompiled()) std::cout << "Shaders compiled succesfuly" << std::endl;
+   else std::cerr << "Error: cannot compile shaders" << std::endl;
 
    GLuint points_vbo = 0;
    glGenBuffers(1, &points_vbo);
@@ -183,9 +174,11 @@ int main(void) {
     while (!glfwWindowShouldClose(pWindow)){//Render loop, отобржается, пока окно не будет закрыто
         glClearColor(col1, col2, col3, 1);
         glClear(GL_COLOR_BUFFER_BIT);//Render here
-        glUseProgram(shader_program);
+
+        basicShader.use();
         glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, 3);
+
         glfwSwapBuffers(pWindow);//Swap front and back buffers
         glfwPollEvents();//Обрабатывает события (позиция курсора, закрытие окна, нажатие клавиш)
         
