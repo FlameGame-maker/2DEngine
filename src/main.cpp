@@ -5,6 +5,46 @@
 #include <thread>
 
 int windowWidth, windowHeight;
+//GLfloat Coords[] = {
+//    0.0f, 4.3f, 0.0f,
+//    3.7f, 2.1f, 0.0f,
+//    2.7f, -3.8f, 0.0f
+//};
+
+//GLfloat Coords[] = {
+//    0.0f, 0.15f, 0.0f,
+//    0.98f, 0.55f, 0.0f,
+//    0.34f, 1.0f, 0.0f
+//};
+
+GLfloat Coords[] = {
+    0.0f, 0.5f, 0.0f,
+    0.5f, 0.0f, 0.0f,
+    0.5f, 0.5f, 0.0f
+};
+GLfloat Colors[] = {
+    0.65f, 0.18f, 0.0f,
+    1.0f, 0.85f, 0.3f,
+    0.94f, 0.46f, 0.02f
+};
+
+const char* vertex_shader =
+"#version 460\n"
+"layout(location = 0) in vec3 vertex_position;"
+"layout(location = 1) in vec3 vertex_color;"
+"out vec3 color;"
+"void main() {"
+"   color = vertex_color;"
+"   gl_Position = vec4(vertex_position, 1.0);"
+"}";
+
+const char* fragment_shader =
+"#version 460\n"
+"in vec3 color;"
+"out vec4 frag_color;"
+"void main() {"
+"   frag_color = vec4(color, 1.0);"
+"}";
 
 void getResolution() {
     const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
@@ -20,9 +60,49 @@ void sizeCallback(GLFWwindow* pWindow, int width, int height) {
 
 void keyCallback(GLFWwindow* pWindow, int key, int scancode, int action, int mode) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(pWindow, 0);
+        glfwSetWindowShouldClose(pWindow, 1);
     }
 }
+
+class Colorizer{
+public:
+    float c1, c2, c3;
+    int stp;
+    void GradientInitilise(float color1, float color2, float color3, int step) {
+        c1 = color1;
+        c2 = color2;
+        c3 = color3;
+        stp = step;
+    }
+    void Gradient() {
+        switch (stp) {
+        case 0:
+            c2 += 0.005f;
+            if (c2 >= 1) stp = 1;
+            break;
+        case 1:
+            c1 -= 0.005f;
+            if (c1 <= 0) stp = 2;
+            break;
+        case 2:
+            c3 += 0.005f;
+            if (c3 >= 1) stp = 3;
+            break;
+        case 3:
+            c2 -= 0.005f;
+            if (c2 <= 0) stp = 4;
+            break;
+        case 4:
+            c1 += 0.005f;
+            if (c1 >= 1) stp = 5;
+            break;
+        case 5:
+            c3 -= 0.005f;
+            if (c3 <= 0) stp = 0;
+            break;
+        }
+    }
+};
 
 int main(void) {
     if (!glfwInit()){//Инициализация glfw
@@ -56,56 +136,66 @@ int main(void) {
    std::cout << "OpenGl min version: " << GLVersion.major << "." << GLVersion.minor << std::endl;
    std::cout << "Current OpenGl version: " << glGetString(GL_VERSION) << std::endl;
 
-   glClearColor(1, 1, 0, 1);
-   float color1 = 1, color2 = 0, color3 = 0;
+   GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+   glShaderSource(vs, 1, &vertex_shader, nullptr);
+   glCompileShader(vs);
+
+   GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+   glShaderSource(fs, 1, &fragment_shader, nullptr);
+   glCompileShader(fs);
+
+   GLuint shader_program = glCreateProgram();
+   glAttachShader(shader_program, vs);
+   glAttachShader(shader_program, fs);
+   glLinkProgram(shader_program);
+
+   glDeleteShader(vs);
+   glDeleteShader(fs);
+
+   GLuint points_vbo = 0;
+   glGenBuffers(1, &points_vbo);
+   glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(Coords), Coords, GL_STATIC_DRAW);
+
+   GLuint colors_vbo = 0;
+   glGenBuffers(1, &colors_vbo);
+   glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
+   glBufferData(GL_ARRAY_BUFFER, sizeof(Colors), Colors, GL_STATIC_DRAW);
+
+   GLuint vao = 0;
+   glGenVertexArrays(1, &vao);
+   glBindVertexArray(vao);
+
+   glEnableVertexAttribArray(0);
+   glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+   glEnableVertexAttribArray(1);
+   glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
+   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+
+   float col1 = 1, col2 = 0, col3 = 0;
    int step = 0;
+   Colorizer Grdnt;
+   Grdnt.GradientInitilise(col1, col2, col3, 0);
    std::chrono::milliseconds timespan(5);
 
     while (!glfwWindowShouldClose(pWindow)){//Render loop, отобржается, пока окно не будет закрыто
-        glClearColor(color1, color2, color3, 1);
+        glClearColor(col1, col2, col3, 1);
         glClear(GL_COLOR_BUFFER_BIT);//Render here
+        glUseProgram(shader_program);
+        glBindVertexArray(vao);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
         glfwSwapBuffers(pWindow);//Swap front and back buffers
-        glfwPollEvents();//Обрабатывает события (позиция курсора, закрытие окна, нажатие клавиш
+        glfwPollEvents();//Обрабатывает события (позиция курсора, закрытие окна, нажатие клавиш)
         
-        switch (step) {
-            case 0:
-                color2 += 0.005;
-                if (color2 >= 1) step = 1;
-            break;
-            case 1:
-                color1 -= 0.005;
-                if (color1 <= 0) step = 2;
-             break;
-            case 2:
-                color3 += 0.005;
-                if (color3 >= 1) step = 3;
-            break;
-            case 3:
-                color2 -= 0.005;
-                if (color2 <= 0) step = 4;
-            break;
-            case 4:
-                color1 += 0.005;
-                if (color1 >= 1) step = 5;
-            break;
-            case 5:
-                color3 -= 0.005;
-                if (color3 <= 0) step = 0;
-            break;
-        }
+        Grdnt.Gradient();
+        col1 = Grdnt.c1;
+        col2 = Grdnt.c2;
+        col3 = Grdnt.c3;
+        step = Grdnt.stp;
 
         std::this_thread::sleep_for(timespan);
-        /*std::cout << color1 << " " << color2;
-        std::this_thread::sleep_for(timespan);
-        system("cls");
-        if (color == 1.0) {
-            while (color >= 0.0) {
-                color -= 0.1;
-                std::cout << color;
-                std::this_thread::sleep_for(timespan);
-                std::cout << "\b\b\b";
-            }
-        }*/
     }
 
     glfwTerminate();
