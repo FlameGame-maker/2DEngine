@@ -1,4 +1,5 @@
 #include "Renderer/basicShader.h"
+#include "Resources/Manager.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -105,7 +106,7 @@ public:
     }
 };
 
-int main(void) {
+int main(int argc, char** argv) {
     if (!glfwInit()){//Инициализация glfw
         std::cout << "glfw initialisation failed" << std::endl;
         return -1;
@@ -138,59 +139,62 @@ int main(void) {
 
    glClearColor(1, 0, 0, 1);
 
-   std::string vertexShader(vertex_shader);
-   std::string fragmentShader(fragment_shader);
-   Renderer::basicShader basicShader(vertexShader, fragmentShader);
-   if (!basicShader.isCompiled()) std::cerr << "Error: cannot compile shaders" << std::endl;
+   {
+       Manager resManager(argv[0]);
+       /*std::shared_ptr<Renderer::basicShader>*/auto pDefaultShaderProgram = resManager.loadShaders("defaultShader", "resources/shaders/vertex.txt", "resources/shaders/fragment.txt");
+       if (!pDefaultShaderProgram) {
+           std::cerr << "Cannot load shaders by main.cpp" << std::endl;
+           return -1;
+       }
 
-   GLuint points_vbo = 0;
-   glGenBuffers(1, &points_vbo);
-   glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(Coords), Coords, GL_STATIC_DRAW);
+       GLuint points_vbo = 0;
+       glGenBuffers(1, &points_vbo);
+       glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+       glBufferData(GL_ARRAY_BUFFER, sizeof(Coords), Coords, GL_STATIC_DRAW);
 
-   GLuint colors_vbo = 0;
-   glGenBuffers(1, &colors_vbo);
-   glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
-   glBufferData(GL_ARRAY_BUFFER, sizeof(Colors), Colors, GL_STATIC_DRAW);
+       GLuint colors_vbo = 0;
+       glGenBuffers(1, &colors_vbo);
+       glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
+       glBufferData(GL_ARRAY_BUFFER, sizeof(Colors), Colors, GL_STATIC_DRAW);
 
-   GLuint vao = 0;
-   glGenVertexArrays(1, &vao);
-   glBindVertexArray(vao);
+       GLuint vao = 0;
+       glGenVertexArrays(1, &vao);
+       glBindVertexArray(vao);
 
-   glEnableVertexAttribArray(0);
-   glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+       glEnableVertexAttribArray(0);
+       glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
+       glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-   glEnableVertexAttribArray(1);
-   glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
-   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+       glEnableVertexAttribArray(1);
+       glBindBuffer(GL_ARRAY_BUFFER, colors_vbo);
+       glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
-   float col1 = 1, col2 = 0, col3 = 0;
-   //int step = 0;
-   Colorizer Grdnt;
-   Grdnt.GradientInitilise(col1, col2, col3, 0);
-   std::chrono::milliseconds timespan(5);
+       float col1 = 1, col2 = 0, col3 = 0;
+       //int step = 0;
+       Colorizer Grdnt;
+       Grdnt.GradientInitilise(col1, col2, col3, 0);
+       std::chrono::milliseconds timespan(5);
 
-    while (!glfwWindowShouldClose(pWindow)){//Render loop, отобржается, пока окно не будет закрыто
-        glClearColor(col1, col2, col3, 1);
-        glClear(GL_COLOR_BUFFER_BIT);//Render here
+       while (!glfwWindowShouldClose(pWindow)) {//Render loop, отобржается, пока окно не будет закрыто
+           glClearColor(col1, col2, col3, 1);
+           glClear(GL_COLOR_BUFFER_BIT);//Render here
 
-        basicShader.use();
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+           pDefaultShaderProgram->use();
+           glBindVertexArray(vao);
+           glDrawArrays(GL_TRIANGLES, 0, 3);
 
-        glfwSwapBuffers(pWindow);//Swap front and back buffers
-        glfwPollEvents();//Обрабатывает события (позиция курсора, закрытие окна, нажатие клавиш)
-        
-        Grdnt.Gradient();
-        col1 = Grdnt.c1;
-        col2 = Grdnt.c2;
-        col3 = Grdnt.c3;
-        //step = Grdnt.stp;
+           glfwSwapBuffers(pWindow);//Swap front and back buffers
+           glfwPollEvents();//Обрабатывает события (позиция курсора, закрытие окна, нажатие клавиш)
 
-        std::this_thread::sleep_for(timespan);
-    }
+           Grdnt.Gradient();
+           col1 = Grdnt.c1;
+           col2 = Grdnt.c2;
+           col3 = Grdnt.c3;
+           //step = Grdnt.stp;
 
+           std::this_thread::sleep_for(timespan);
+       }
+   }
     glfwTerminate();
     return 0;
 }
