@@ -117,9 +117,9 @@ int main(void) {
     getResolution();
     GLFWwindow* pWindow = glfwCreateWindow(windowWidth, windowHeight, "2DEngine", nullptr, nullptr);//Create a windowed mode window and its OpenGL context
 
-    if (!pWindow){//Инициализация окна
-        glfwTerminate();
+    if (!pWindow){//Создание окна
         std::cout << "glfwCreateWIndow failed" << std::endl;
+        glfwTerminate();
         return -1;
     }
 
@@ -128,20 +128,20 @@ int main(void) {
 
     glfwMakeContextCurrent(pWindow);//Make the window's context current
 
-   if(!gladLoadGL()){//Инициализация GLAD
-      std::cout << "GLAD initialisation failed" << std::endl;
-      return -1;
+   if(!gladLoadGL()){//Загрузка GLAD
+      std::cout << "Can't load GLAD" << std::endl;
    }
   
    std::cout << "Renderer: " << glGetString(GL_RENDERER) << std::endl;
-   std::cout << "OpenGl min version: " << GLVersion.major << "." << GLVersion.minor << std::endl;
+   //std::cout << "OpenGl min version: " << GLVersion.major << "." << GLVersion.minor << std::endl;
    std::cout << "Current OpenGl version: " << glGetString(GL_VERSION) << std::endl;
+
+   glClearColor(1, 0, 0, 1);
 
    std::string vertexShader(vertex_shader);
    std::string fragmentShader(fragment_shader);
    Renderer::basicShader basicShader(vertexShader, fragmentShader);
-   if (basicShader.isCompiled()) std::cout << "Shaders compiled succesfuly" << std::endl;
-   else std::cerr << "Error: cannot compile shaders" << std::endl;
+   if (!basicShader.isCompiled()) std::cerr << "Error: cannot compile shaders" << std::endl;
 
    GLuint points_vbo = 0;
    glGenBuffers(1, &points_vbo);
@@ -166,7 +166,7 @@ int main(void) {
    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 
    float col1 = 1, col2 = 0, col3 = 0;
-   int step = 0;
+   //int step = 0;
    Colorizer Grdnt;
    Grdnt.GradientInitilise(col1, col2, col3, 0);
    std::chrono::milliseconds timespan(5);
@@ -186,7 +186,7 @@ int main(void) {
         col1 = Grdnt.c1;
         col2 = Grdnt.c2;
         col3 = Grdnt.c3;
-        step = Grdnt.stp;
+        //step = Grdnt.stp;
 
         std::this_thread::sleep_for(timespan);
     }
